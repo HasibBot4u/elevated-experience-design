@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Hind+Siliguri:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,8 +9,6 @@
    Inspiration: Netflix, Apple TV+, Disney+ — premium streaming feel
    ALL colors are HSL. Never hardcode colors in components.
    =================================================================== */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Hind+Siliguri:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 @layer base {
   :root {
