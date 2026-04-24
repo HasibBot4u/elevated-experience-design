@@ -112,7 +112,8 @@
   ::selection { background: hsl(var(--primary) / 0.4); color: hsl(var(--foreground)); }
 
   /* Bangla typography helper — applied selectively */
-  .font-bangla { font-family: 'Hind Siliguri', 'Inter', sans-serif; }
+  .font-bangla,
+  .bangla { font-family: 'Hind Siliguri', 'Inter', sans-serif; }
   .font-display { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.03em; }
 }
 

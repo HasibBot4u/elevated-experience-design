@@ -86,7 +86,12 @@ export function StudentTopbar() {
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild><Link to="/admin"><ShieldCheck className="w-4 h-4 mr-2 text-accent" /> Admin panel</Link></DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin/dashboard">
+                      <ShieldCheck className="w-4 h-4 mr-2 text-accent" />
+                      <span className="bangla">অ্যাডমিন প্যানেল</span>
+                    </Link>
+                  </DropdownMenuItem>
                 </>
               )}
               <DropdownMenuSeparator />
