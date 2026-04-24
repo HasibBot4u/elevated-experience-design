@@ -76,8 +76,8 @@ export default function AdminContentPage() {
   };
   const renameRow = async (table: "subjects" | "cycles" | "chapters" | "videos", id: string, current: string) => {
     const name = prompt("New name?", current); if (!name || name === current) return;
-    const field = table === "videos" ? "title" : "name";
-    const { error } = await supabase.from(table).update({ [field]: name }).eq("id", id);
+    const payload: any = table === "videos" ? { title: name } : { name };
+    const { error } = await (supabase.from(table) as any).update(payload).eq("id", id);
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Renamed" }); load(); }
   };

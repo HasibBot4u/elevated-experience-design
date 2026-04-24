@@ -20,11 +20,8 @@ export function AdminLayout() {
     <div className="min-h-screen bg-background grid grid-cols-1 md:grid-cols-[260px_1fr]">
       <aside className="hidden md:flex flex-col border-r border-white/5 bg-surface/40 backdrop-blur-xl p-5 gap-2 sticky top-0 h-screen">
         <div className="flex items-center gap-2 px-2 mb-4">
-          <NexusLogo className="w-8 h-8" />
-          <div>
-            <p className="font-display font-bold leading-tight">Nexus</p>
-            <p className="text-[10px] uppercase tracking-widest text-foreground-muted">Admin Console</p>
-          </div>
+          <NexusLogo size="sm" href="/admin" />
+          <span className="text-[10px] uppercase tracking-widest text-foreground-muted px-1.5 py-0.5 rounded bg-primary/15 text-primary ml-1">Admin</span>
         </div>
         <nav className="flex-1 flex flex-col gap-1">
           {items.map((it) => (
@@ -49,10 +46,7 @@ export function AdminLayout() {
       </aside>
       <main className="min-h-screen">
         <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-4 h-14 border-b border-white/5 bg-background/80 backdrop-blur-xl">
-          <div className="flex items-center gap-2">
-            <NexusLogo className="w-7 h-7" />
-            <span className="font-display font-bold">Admin</span>
-          </div>
+          <NexusLogo size="sm" href="/admin" />
           <button onClick={() => nav("/dashboard")} className="text-xs text-foreground-dim hover:text-foreground">Exit</button>
         </div>
         <div className="md:hidden border-b border-white/5 overflow-x-auto">
