@@ -1,12 +1,13 @@
 import { ReactNode } from "react";
+import { Outlet } from "react-router-dom";
 import { PublicNavbar } from "@/components/public/PublicNavbar";
 import { PublicFooter } from "@/components/public/PublicFooter";
 
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({ children }: { children?: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <PublicNavbar />
-      <main className="flex-1 pt-24">{children}</main>
+      <main className="flex-1 pt-24">{children ?? <Outlet />}</main>
       <PublicFooter />
     </div>
   );
