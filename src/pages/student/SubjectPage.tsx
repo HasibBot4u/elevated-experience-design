@@ -20,11 +20,10 @@ export default function SubjectPage() {
             <ArrowLeft className="w-4 h-4" /> All courses
           </Link>
           <div className="flex items-start gap-5">
-            <span className="text-6xl">{subject.icon}</span>
+            <span className="text-6xl">{subject.icon_name ?? "📚"}</span>
             <div>
               <h1 className="font-display text-4xl md:text-5xl font-bold tracking-tighter">{subject.name}</h1>
               {subject.name_bn && <p className="font-bangla text-lg text-foreground-dim mt-1">{subject.name_bn}</p>}
-              {subject.description && <p className="text-foreground-dim mt-4 max-w-2xl">{subject.description}</p>}
             </div>
           </div>
         </div>

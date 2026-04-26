@@ -18,21 +18,33 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!profile) return;
-    supabase.from("announcements").select("*")
-      .eq("is_active", true).eq("show_on_dashboard", true)
+    const sb = supabase as any;
+    sb.from("announcements").select("*")
+      .eq("is_active", true)
+      .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false }).limit(3)
-      .then(({ data }) => setAnnouncements((data as Announcement[]) ?? []));
+      .then(({ data }: any) => setAnnouncements((data ?? []) as unknown as Announcement[]));
 
-    supabase.from("watch_history")
-      .select("video_id, progress_percent, progress_seconds, watched_at, completed")
+    sb.from("watch_history")
+      .select("video_id, progress_seconds, watched_at, completed")
       .eq("user_id", profile.id)
       .order("watched_at", { ascending: false }).limit(20)
-      .then(({ data }) => {
+      .then(({ data }: any) => {
         const rows = (data ?? []) as any[];
-        setContinueRows(rows.filter(r => !r.completed && r.progress_percent < 95).slice(0, 8));
+        setContinueRows(
+          rows
+            .filter((r) => !r.completed)
+            .map((r) => ({
+              video_id: r.video_id,
+              progress_percent: 0,
+              progress_seconds: r.progress_seconds || 0,
+              watched_at: r.watched_at,
+            }))
+            .slice(0, 8),
+        );
         const totalSec = rows.reduce((s, r) => s + (r.progress_seconds || 0), 0);
         setStats({
-          completed: rows.filter(r => r.completed).length,
+          completed: rows.filter((r) => r.completed).length,
           hours: Math.floor(totalSec / 3600),
           minutes: Math.floor((totalSec % 3600) / 60),
         });
@@ -79,11 +91,11 @@ export default function DashboardPage() {
           <div className="grid md:grid-cols-3 gap-3">
             {announcements.map(a => (
               <div key={a.id} className="rounded-2xl p-5 bg-background-elevated border border-border">
-                <p className={`text-[10px] uppercase tracking-wider font-semibold mb-2 ${
-                  a.type === "urgent" ? "text-destructive" : a.type === "warning" ? "text-warning" : a.type === "success" ? "text-success" : "text-info"
-                }`}>{a.type}</p>
+                {a.is_pinned && (
+                  <p className="text-[10px] uppercase tracking-wider font-semibold mb-2 text-warning">Pinned</p>
+                )}
                 <p className="font-semibold mb-1">{a.title}</p>
-                {a.body && <p className="text-sm text-foreground-dim line-clamp-2">{a.body}</p>}
+                {a.content && <p className="text-sm text-foreground-dim line-clamp-2">{a.content}</p>}
               </div>
             ))}
           </div>
@@ -143,7 +155,7 @@ export default function DashboardPage() {
                     style={{ background: s.color ?? "hsl(var(--primary))" }} />
                   <div className="relative flex flex-col h-full justify-between">
                     <div>
-                      <span className="text-3xl">{s.icon}</span>
+                      <span className="text-3xl">{s.icon_name ?? "📚"}</span>
                       <h3 className="font-display text-2xl font-bold mt-3">{s.name}</h3>
                       {s.name_bn && <p className="font-bangla text-sm text-foreground-muted">{s.name_bn}</p>}
                     </div>

@@ -6,20 +6,22 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Notification } from "@/types/nexus";
 import { Button } from "@/components/ui/button";
 
+const sb = supabase as any;
+
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [items, setItems] = useState<Notification[]>([]);
 
   const load = async () => {
     if (!user) return;
-    const { data } = await supabase.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
-    setItems((data as Notification[]) ?? []);
+    const { data } = await sb.from("notifications").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+    setItems((data ?? []) as unknown as Notification[]);
   };
   useEffect(() => { load(); }, [user]);
 
   const markAll = async () => {
     if (!user) return;
-    await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
+    await sb.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false);
     load();
   };
 
@@ -50,7 +52,7 @@ export default function NotificationsPage() {
                 {!n.is_read && <span className="w-2 h-2 mt-2 rounded-full bg-primary shrink-0" />}
                 <div className="flex-1">
                   <p className="font-medium">{n.title}</p>
-                  {n.body && <p className="text-sm text-foreground-dim mt-1">{n.body}</p>}
+                  {n.message && <p className="text-sm text-foreground-dim mt-1">{n.message}</p>}
                   <p className="text-xs text-foreground-muted mt-2">{new Date(n.created_at).toLocaleString()}</p>
                 </div>
               </div>
