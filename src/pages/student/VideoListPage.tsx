@@ -65,15 +65,22 @@ export default function VideoListPage() {
       </div>
 
       <div className="container py-10 space-y-4">
-        {chapter.requires_enrollment && hasAccess === false ? (
+        {chapter.requires_enrollment && hasAccess === null ? (
+          <div className="space-y-2 max-w-md mx-auto">
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-10 w-2/3 mx-auto rounded-full" />
+          </div>
+        ) : chapter.requires_enrollment && hasAccess === false ? (
           <div className="rounded-2xl p-10 bg-gradient-card border border-warning/30 text-center max-w-md mx-auto">
             <div className="w-14 h-14 rounded-full bg-warning/10 border border-warning/30 flex items-center justify-center mx-auto mb-5">
               <Lock className="w-6 h-6 text-warning" />
             </div>
-            <h3 className="font-display text-xl font-bold mb-2">Premium chapter</h3>
-            <p className="text-foreground-dim mb-6 text-sm">Enter your enrollment code to unlock this chapter on this device.</p>
-            <Button onClick={() => setShowCodeModal(true)} className="rounded-full bg-primary hover:bg-primary-glow shadow-glow">
-              <KeyRound className="w-4 h-4 mr-2" /> Enter code
+            <h3 className="font-display text-xl font-bold mb-2 font-bangla">প্রিমিয়াম অধ্যায়</h3>
+            <p className="text-foreground-dim mb-6 text-sm font-bangla">
+              এই অধ্যায়টি আনলক করতে আপনার এনরোলমেন্ট কোড লিখুন।
+            </p>
+            <Button onClick={() => setShowCodeModal(true)} className="rounded-full bg-primary hover:bg-primary-glow shadow-glow font-bangla">
+              <KeyRound className="w-4 h-4 mr-2" /> কোড দিয়ে আনলক করুন
             </Button>
           </div>
         ) : chapter.videos.length === 0 ? (
@@ -108,11 +115,16 @@ export default function VideoListPage() {
 
       <Dialog open={showCodeModal} onOpenChange={setShowCodeModal}>
         <DialogContent className="glass-strong border-border">
-          <DialogHeader><DialogTitle>Enter enrollment code</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-bangla">এনরোলমেন্ট কোড লিখুন</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" className="h-12 font-mono tracking-widest text-center text-lg" />
-            <Button onClick={redeem} disabled={busy} className="w-full h-11 rounded-full bg-primary hover:bg-primary-glow font-semibold shadow-glow">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock chapter"}
+            <Input
+              value={code}
+              onChange={e => setCode(formatCode(e.target.value))}
+              placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+              className="h-12 font-mono tracking-widest text-center text-lg"
+            />
+            <Button onClick={redeem} disabled={busy} className="w-full h-11 rounded-full bg-primary hover:bg-primary-glow font-semibold shadow-glow font-bangla">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "কোড দিয়ে আনলক করুন"}
             </Button>
           </div>
         </DialogContent>
