@@ -1,21 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Lock, PlayCircle, Clock, KeyRound, Loader2 } from "lucide-react";
 import { useCatalog } from "@/contexts/CatalogContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useChapterAccess } from "@/hooks/useChapterAccess";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function VideoListPage() {
   const { chapterId } = useParams();
   const { catalog, isLoading } = useCatalog();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,32 +23,27 @@ export default function VideoListPage() {
     if (ch.id === chapterId) { chapter = ch; cycle = cy; subject = s; }
   })));
 
-  useEffect(() => {
-    if (!chapter || !user) return;
-    if (!chapter.requires_enrollment) { setHasAccess(true); return; }
-    supabase.from("chapter_access").select("id").eq("user_id", user.id).eq("chapter_id", chapter.id).maybeSingle()
-      .then(({ data }) => setHasAccess(!!data));
-  }, [chapter, user]);
+  const { hasAccess, redeemCode } = useChapterAccess(chapter?.id, !!chapter?.requires_enrollment);
+
+  const formatCode = (raw: string) => {
+    const stripped = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 24);
+    return stripped.match(/.{1,4}/g)?.join("-") ?? stripped;
+  };
 
   const redeem = async () => {
     if (!code.trim()) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc("redeem_enrollment_code", {
-      _code: code.trim(),
-      _device_fingerprint: navigator.userAgent.slice(0, 200),
-    });
+    const res = await redeemCode(code);
     setBusy(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    const r = data as any;
-    if (!r.ok) {
-      const msg = r.error === "invalid_code" ? "Invalid code" : r.error === "code_exhausted" ? "Code already used" : "Failed";
-      toast({ title: msg, variant: "destructive" });
+    if (!res.success) {
+      toast({ title: "ত্রুটি", description: res.error, variant: "destructive" });
       return;
     }
-    toast({ title: "Chapter unlocked" });
+    toast({ title: "অধ্যায় আনলক হয়েছে" });
     setShowCodeModal(false);
-    setHasAccess(true);
+    setCode("");
   };
+
 
   if (isLoading) return <div className="container py-20 text-center text-foreground-muted">Loading…</div>;
   if (!chapter) return <Navigate to="/courses" replace />;
