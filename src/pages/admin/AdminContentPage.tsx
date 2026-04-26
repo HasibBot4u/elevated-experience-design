@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Subject, Cycle, Chapter, Video } from "@/types/nexus";
 
+const sb = supabase as any;
+
 export default function AdminContentPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [cycles, setCycles] = useState<Cycle[]>([]);
@@ -18,15 +20,15 @@ export default function AdminContentPage() {
   const load = async () => {
     setLoading(true);
     const [s, c, ch, v] = await Promise.all([
-      supabase.from("subjects").select("*").order("display_order"),
-      supabase.from("cycles").select("*").order("display_order"),
-      supabase.from("chapters").select("*").order("display_order"),
-      supabase.from("videos").select("*").order("display_order"),
+      sb.from("subjects").select("*").order("order_index"),
+      sb.from("cycles").select("*").order("order_index"),
+      sb.from("chapters").select("*").order("order_index"),
+      sb.from("videos").select("*").order("order_index"),
     ]);
-    setSubjects((s.data ?? []) as Subject[]);
-    setCycles((c.data ?? []) as Cycle[]);
-    setChapters((ch.data ?? []) as Chapter[]);
-    setVideos((v.data ?? []) as Video[]);
+    setSubjects((s.data ?? []) as unknown as Subject[]);
+    setCycles((c.data ?? []) as unknown as Cycle[]);
+    setChapters((ch.data ?? []) as unknown as Chapter[]);
+    setVideos((v.data ?? []) as unknown as Video[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -34,7 +36,7 @@ export default function AdminContentPage() {
   const addSubject = async () => {
     const name = prompt("Subject name?"); if (!name) return;
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const { error } = await supabase.from("subjects").insert({ name, slug, display_order: subjects.length });
+    const { error } = await sb.from("subjects").insert({ name, slug, order_index: subjects.length, is_active: true });
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Subject added" }); load(); }
   };
@@ -42,7 +44,7 @@ export default function AdminContentPage() {
     if (!activeSubject) return;
     const name = prompt("Cycle name?"); if (!name) return;
     const list = cycles.filter(c => c.subject_id === activeSubject);
-    const { error } = await supabase.from("cycles").insert({ name, subject_id: activeSubject, display_order: list.length });
+    const { error } = await sb.from("cycles").insert({ name, subject_id: activeSubject, order_index: list.length, is_active: true });
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Cycle added" }); load(); }
   };
@@ -51,7 +53,7 @@ export default function AdminContentPage() {
     const name = prompt("Chapter name?"); if (!name) return;
     const requires = confirm("Require enrollment code for this chapter?");
     const list = chapters.filter(c => c.cycle_id === activeCycle);
-    const { error } = await supabase.from("chapters").insert({ name, cycle_id: activeCycle, requires_enrollment: requires, display_order: list.length });
+    const { error } = await sb.from("chapters").insert({ name, cycle_id: activeCycle, requires_enrollment: requires, order_index: list.length, is_active: true });
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Chapter added" }); load(); }
   };
@@ -61,23 +63,24 @@ export default function AdminContentPage() {
     const source_type = (prompt("Source: youtube / drive / telegram", "youtube") || "youtube").trim();
     const url = prompt("Source URL or ID?") || "";
     const list = videos.filter(v => v.chapter_id === activeChapter);
-    const payload: any = { title, chapter_id: activeChapter, source_type, source_url: url, display_order: list.length };
-    if (source_type === "youtube") payload.youtube_video_id = url.match(/[a-zA-Z0-9_-]{11}/)?.[0] ?? url;
+    const payload: any = { title, chapter_id: activeChapter, source_type, order_index: list.length, is_active: true };
+    if (source_type === "youtube") payload.youtube_id = url.match(/[a-zA-Z0-9_-]{11}/)?.[0] ?? url;
     if (source_type === "drive") payload.drive_file_id = url;
-    const { error } = await supabase.from("videos").insert(payload);
+    if (source_type === "telegram") payload.telegram_message_id = url;
+    const { error } = await sb.from("videos").insert(payload);
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Video added" }); load(); }
   };
   const removeRow = async (table: "subjects" | "cycles" | "chapters" | "videos", id: string) => {
     if (!confirm("Delete this item permanently?")) return;
-    const { error } = await supabase.from(table).delete().eq("id", id);
+    const { error } = await sb.from(table).delete().eq("id", id);
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Deleted" }); load(); }
   };
   const renameRow = async (table: "subjects" | "cycles" | "chapters" | "videos", id: string, current: string) => {
     const name = prompt("New name?", current); if (!name || name === current) return;
     const payload: any = table === "videos" ? { title: name } : { name };
-    const { error } = await (supabase.from(table) as any).update(payload).eq("id", id);
+    const { error } = await sb.from(table).update(payload).eq("id", id);
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Renamed" }); load(); }
   };

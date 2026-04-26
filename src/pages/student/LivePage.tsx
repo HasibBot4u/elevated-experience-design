@@ -4,15 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import type { LiveClass } from "@/types/nexus";
 import { Button } from "@/components/ui/button";
 
+const sb = supabase as any;
+
 export default function LivePage() {
   const [items, setItems] = useState<LiveClass[]>([]);
   useEffect(() => {
-    supabase.from("live_classes").select("*").eq("is_active", true).order("scheduled_at")
-      .then(({ data }) => setItems((data as LiveClass[]) ?? []));
+    sb.from("live_classes").select("*").eq("is_active", true).order("start_time")
+      .then(({ data }: any) => setItems((data ?? []) as unknown as LiveClass[]));
   }, []);
 
-  const upcoming = items.filter(i => new Date(i.scheduled_at) >= new Date() && !i.is_cancelled && !i.is_completed);
-  const past = items.filter(i => i.is_completed || new Date(i.scheduled_at) < new Date());
+  const now = Date.now();
+  const upcoming = items.filter(i => new Date(i.start_time).getTime() >= now);
+  const past = items.filter(i => new Date(i.start_time).getTime() < now);
 
   return (
     <div className="container max-w-4xl py-10 space-y-10">
@@ -36,11 +39,11 @@ export default function LivePage() {
               <div key={l.id} className="rounded-2xl p-5 bg-gradient-card border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <p className="font-semibold">{l.title}</p>
-                  <p className="text-xs text-foreground-muted mt-1">{new Date(l.scheduled_at).toLocaleString()} · {l.duration_minutes} min</p>
+                  <p className="text-xs text-foreground-muted mt-1">{new Date(l.start_time).toLocaleString()}</p>
                 </div>
-                {l.meeting_url && (
+                {l.join_url && (
                   <Button asChild className="rounded-full bg-primary hover:bg-primary-glow shadow-glow">
-                    <a href={l.meeting_url} target="_blank" rel="noreferrer">Join <ExternalLink className="w-4 h-4 ml-2" /></a>
+                    <a href={l.join_url} target="_blank" rel="noreferrer">Join <ExternalLink className="w-4 h-4 ml-2" /></a>
                   </Button>
                 )}
               </div>
@@ -56,7 +59,7 @@ export default function LivePage() {
             {past.map(l => (
               <div key={l.id} className="rounded-xl p-4 bg-background-elevated border border-border opacity-70">
                 <p className="font-medium text-sm">{l.title}</p>
-                <p className="text-xs text-foreground-muted mt-1">{new Date(l.scheduled_at).toLocaleString()}</p>
+                <p className="text-xs text-foreground-muted mt-1">{new Date(l.start_time).toLocaleString()}</p>
               </div>
             ))}
           </div>

@@ -2,99 +2,128 @@ export type AppRole = "admin" | "user";
 
 export interface Profile {
   id: string;
-  email: string | null;
-  display_name: string | null;
-  avatar_url: string | null;
-  phone: string | null;
-  is_blocked: boolean;
-  last_active_at: string | null;
-  created_at: string;
+  email: string;
+  display_name?: string | null;
+  role: AppRole;
+  is_enrolled?: boolean;
+  is_blocked?: boolean;
+  avatar_url?: string | null;
+  phone?: string | null;
+  created_at?: string;
 }
 
 export interface Subject {
   id: string; name: string; name_bn: string | null; slug: string;
-  icon: string | null; color: string | null; thumbnail_color: string | null;
-  description: string | null; description_bn: string | null;
-  display_order: number; is_active: boolean;
+  icon_name: string | null; color: string | null;
+  order_index: number; is_active: boolean;
+  created_at?: string;
 }
 
 export interface Cycle {
   id: string; subject_id: string; name: string; name_bn: string | null;
-  description: string | null; description_bn: string | null;
-  telegram_channel_id: string | null;
-  display_order: number; is_active: boolean;
+  order_index: number; is_active: boolean;
 }
 
 export interface Chapter {
   id: string; cycle_id: string; name: string; name_bn: string | null;
-  description: string | null; description_bn: string | null;
-  requires_enrollment: boolean; display_order: number; is_active: boolean;
+  slug: string | null; description: string | null;
+  requires_enrollment: boolean; order_index: number; is_active: boolean;
 }
 
 export interface Video {
   id: string; chapter_id: string; title: string; title_bn: string | null;
-  description: string | null; description_bn: string | null;
   source_type: "telegram" | "youtube" | "drive";
-  source_url: string | null;
-  youtube_video_id: string | null;
-  drive_file_id: string | null;
   telegram_channel_id: string | null;
-  telegram_message_id: number | null;
-  duration: string | null; size_mb: number | null;
+  telegram_message_id: string | null;
+  youtube_id: string | null;
+  drive_file_id: string | null;
+  duration_seconds: number | null;
   thumbnail_url: string | null;
-  display_order: number; is_active: boolean;
-  created_at: string;
+  order_index: number; is_active: boolean;
+  size_mb: number | null;
 }
 
 export interface WatchHistoryRow {
   id: string; user_id: string; video_id: string;
-  progress_percent: number; progress_seconds: number;
-  completed: boolean; watch_count: number;
-  watched_at: string;
+  progress_seconds: number; completed: boolean;
+  updated_at: string; watched_at: string;
 }
 
-export interface Announcement {
-  id: string; title: string; title_bn: string | null;
-  body: string | null; body_bn: string | null;
-  type: "info" | "warning" | "success" | "urgent";
-  is_active: boolean; show_on_dashboard: boolean;
-  expires_at: string | null; created_at: string;
+export interface VideoNote {
+  id: string; user_id: string; video_id: string;
+  content: string; updated_at: string; created_at: string;
 }
 
-export interface Notification {
-  id: string; user_id: string; title: string; title_bn: string | null;
-  body: string | null; body_bn: string | null;
-  type: "info" | "success" | "warning" | "system";
-  is_read: boolean; action_url: string | null; created_at: string;
-}
-
-export interface LiveClass {
-  id: string; title: string; title_bn: string | null;
-  description: string | null; description_bn: string | null;
-  subject_id: string | null; cycle_id: string | null;
-  scheduled_at: string; duration_minutes: number;
-  meeting_url: string | null; stream_url: string | null;
-  is_active: boolean; is_cancelled: boolean; is_completed: boolean;
-  created_at: string;
+export interface VideoBookmark {
+  id: string; user_id: string; video_id: string;
+  timestamp_seconds: number; label: string | null; created_at: string;
 }
 
 export interface EnrollmentCode {
-  id: string; code: string; chapter_id: string;
-  label: string | null; notes: string | null;
-  max_uses: number; uses_count: number;
-  is_active: boolean; generated_at: string;
+  id: string; code: string; chapter_id: string | null;
+  max_uses: number; used_count: number; is_active: boolean;
+  expires_at: string | null; created_by: string | null; created_at: string;
 }
 
 export interface ChapterAccessRow {
   id: string; user_id: string; chapter_id: string;
-  enrollment_code_id: string | null;
-  device_fingerprint: string | null;
-  first_accessed_at: string; last_accessed_at: string;
-  access_count: number; is_blocked: boolean; blocked_reason: string | null;
+  device_fingerprint: string | null; ip_address: string | null;
+  granted_at: string; code_used: string | null;
 }
 
 export interface ActivityLog {
   id: string; user_id: string | null; action: string;
-  details: Record<string, unknown>; ip_address: string | null;
-  user_agent: string | null; created_at: string;
+  metadata: Record<string, unknown>; created_at: string;
+  ip_address: string | null; user_agent: string | null;
+}
+
+export interface Announcement {
+  id: string; title: string; content: string | null;
+  is_pinned: boolean; is_active: boolean;
+  created_at: string; created_by: string | null;
+}
+
+export interface Notification {
+  id: string; user_id: string; title: string; message: string | null;
+  type: string; is_read: boolean; created_at: string; action_url: string | null;
+}
+
+export interface LiveClass {
+  id: string; title: string; description: string | null;
+  start_time: string; end_time: string | null;
+  join_url: string | null; is_active: boolean;
+  subject_id: string | null; created_by: string | null;
+}
+
+export interface CycleCompletion {
+  id: string; user_id: string; cycle_id: string; completed_at: string;
+}
+
+export interface Quiz {
+  id: string; title: string; chapter_id: string;
+  time_limit_seconds: number | null; is_active: boolean;
+}
+
+export interface QuizQuestion {
+  id: string; quiz_id: string; question: string;
+  options: string[]; correct_idx: number;
+  explanation: string | null; order_index: number;
+}
+
+export interface QuizAttempt {
+  id: string; user_id: string; quiz_id: string;
+  score: number; answers: Record<string, unknown>;
+  started_at: string; completed_at: string | null;
+}
+
+export interface QaQuestion {
+  id: string; user_id: string; chapter_id: string;
+  title: string; body: string | null; created_at: string;
+  is_answered: boolean; votes: number;
+}
+
+export interface QaAnswer {
+  id: string; question_id: string; user_id: string;
+  body: string; created_at: string;
+  is_accepted: boolean; votes: number;
 }

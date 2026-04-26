@@ -32,10 +32,9 @@ export default function CoursesPage() {
                   style={{ background: s.color ?? "hsl(var(--primary))" }} />
                 <div className="relative flex flex-col h-full justify-between">
                   <div>
-                    <span className="text-4xl">{s.icon}</span>
+                    <span className="text-4xl">{s.icon_name ?? "📚"}</span>
                     <h3 className="font-display text-2xl font-bold mt-4">{s.name}</h3>
                     {s.name_bn && <p className="font-bangla text-sm text-foreground-muted mt-0.5">{s.name_bn}</p>}
-                    {s.description && <p className="text-sm text-foreground-dim mt-3 line-clamp-2">{s.description}</p>}
                   </div>
                   <div className="flex items-center justify-between mt-6 text-sm">
                     <span className="text-foreground-muted">

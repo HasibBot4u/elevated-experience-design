@@ -2,45 +2,34 @@ import { useEffect, useState } from "react";
 import { Loader2, Shield, ShieldOff, Ban, CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Profile, AppRole } from "@/types/nexus";
-
-interface Row extends Profile { roles: AppRole[]; }
+import type { Profile } from "@/types/nexus";
 
 export default function AdminUsersPage() {
-  const [rows, setRows] = useState<Row[]>([]);
+  const [rows, setRows] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const { toast } = useToast();
 
   const load = async () => {
     setLoading(true);
-    const [{ data: profiles }, { data: roles }] = await Promise.all([
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase.from("user_roles").select("user_id, role"),
-    ]);
-    const map = new Map<string, AppRole[]>();
-    (roles ?? []).forEach((r: any) => {
-      const arr = map.get(r.user_id) ?? [];
-      arr.push(r.role);
-      map.set(r.user_id, arr);
-    });
-    setRows(((profiles ?? []) as Profile[]).map(p => ({ ...p, roles: map.get(p.id) ?? [] })));
+    const { data: profiles } = await supabase
+      .from("profiles" as any)
+      .select("*")
+      .order("created_at", { ascending: false });
+    setRows((profiles ?? []) as unknown as Profile[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
-  const toggleAdmin = async (r: Row) => {
-    const isAdmin = r.roles.includes("admin");
-    if (isAdmin) {
-      await supabase.from("user_roles").delete().eq("user_id", r.id).eq("role", "admin");
-    } else {
-      await supabase.from("user_roles").insert({ user_id: r.id, role: "admin" });
-    }
+  const toggleAdmin = async (r: Profile) => {
+    const isAdmin = r.role === "admin";
+    const newRole = isAdmin ? "user" : "admin";
+    await supabase.from("profiles" as any).update({ role: newRole }).eq("id", r.id);
     toast({ title: isAdmin ? "Admin removed" : "Admin granted" });
     load();
   };
-  const toggleBlock = async (r: Row) => {
-    await supabase.from("profiles").update({ is_blocked: !r.is_blocked }).eq("id", r.id);
+  const toggleBlock = async (r: Profile) => {
+    await supabase.from("profiles" as any).update({ is_blocked: !r.is_blocked }).eq("id", r.id);
     toast({ title: r.is_blocked ? "User unblocked" : "User blocked" });
     load();
   };
@@ -81,7 +70,7 @@ export default function AdminUsersPage() {
                       <p className="text-xs text-foreground-muted">{r.email}</p>
                     </td>
                     <td className="p-4">
-                      {r.roles.includes("admin") ? (
+                      {r.role === "admin" ? (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-primary/15 text-primary">Admin</span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-white/5 text-foreground-dim">User</span>
@@ -96,7 +85,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="p-4 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => toggleAdmin(r)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs">
-                        {r.roles.includes("admin") ? <><ShieldOff className="w-3 h-3" /> Demote</> : <><Shield className="w-3 h-3" /> Promote</>}
+                        {r.role === "admin" ? <><ShieldOff className="w-3 h-3" /> Demote</> : <><Shield className="w-3 h-3" /> Promote</>}
                       </button>
                       <button onClick={() => toggleBlock(r)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 hover:bg-destructive/20 text-xs">
                         {r.is_blocked ? "Unblock" : "Block"}

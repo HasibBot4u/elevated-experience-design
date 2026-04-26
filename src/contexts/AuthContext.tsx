@@ -1,13 +1,23 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import type { Profile, AppRole } from "@/types/nexus";
+
+interface Profile {
+  id: string;
+  email: string;
+  display_name?: string | null;
+  role: 'user' | 'admin';
+  is_enrolled?: boolean;
+  is_blocked?: boolean;
+  avatar_url?: string | null;
+  phone?: string | null;
+  created_at?: string;
+}
 
 interface AuthState {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
-  roles: AppRole[];
   isAdmin: boolean;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
@@ -24,16 +34,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadProfileAndRoles = useCallback(async (uid: string) => {
-    const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", uid),
-    ]);
-    setProfile((p as Profile) ?? null);
-    setRoles(((r ?? []) as { role: AppRole }[]).map(x => x.role));
+  const fetchProfile = useCallback(async (u: User): Promise<Profile | null> => {
+    const { data, error } = await supabase
+      .from("profiles" as any)
+      .select("*")
+      .eq("id", u.id)
+      .single();
+
+    if (error || !data) {
+      // Auto-create a profile if one does not exist yet.
+      const newProfile = {
+        id: u.id,
+        email: u.email ?? "",
+        display_name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Student",
+        role: "user" as const,
+        is_enrolled: false,
+        is_blocked: false,
+      };
+      const { data: created } = await supabase
+        .from("profiles" as any)
+        .insert(newProfile)
+        .select("*")
+        .single();
+      return (created as unknown as Profile) ?? (newProfile as Profile);
+    }
+    return data as unknown as Profile;
+  }, []);
+
+  const enforceBlocked = useCallback(async (p: Profile | null) => {
+    if (p?.is_blocked) {
+      await supabase.auth.signOut();
+      setProfile(null);
+      throw new Error("Your account has been blocked. Contact support.");
+    }
   }, []);
 
   useEffect(() => {
@@ -43,39 +78,75 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(s?.user ?? null);
       if (s?.user) {
         // Defer Supabase calls to avoid deadlock.
-        setTimeout(() => { loadProfileAndRoles(s.user.id); }, 0);
+        setTimeout(async () => {
+          const p = await fetchProfile(s.user);
+          setProfile(p);
+          if (p?.is_blocked) {
+            await supabase.auth.signOut();
+            setProfile(null);
+          }
+        }, 0);
       } else {
         setProfile(null);
-        setRoles([]);
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) loadProfileAndRoles(s.user.id).finally(() => setIsLoading(false));
-      else setIsLoading(false);
+      if (s?.user) {
+        const p = await fetchProfile(s.user);
+        setProfile(p);
+        if (p?.is_blocked) {
+          await supabase.auth.signOut();
+          setProfile(null);
+        }
+      }
+      setIsLoading(false);
     });
 
     return () => sub.subscription.unsubscribe();
-  }, [loadProfileAndRoles]);
+  }, [fetchProfile]);
 
   const signIn: AuthState["signIn"] = async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: error.message };
+
+    if (data.user) {
+      const p = await fetchProfile(data.user);
+      setProfile(p);
+      try {
+        await enforceBlocked(p);
+      } catch (e: any) {
+        return { error: e.message };
+      }
+      // Activity log (fire and forget)
+      supabase.from("activity_logs" as any).insert({
+        user_id: data.user.id,
+        action: "login",
+        metadata: { email: data.user.email },
+      } as any).then(() => {}, () => {});
+    }
+    return { error: null };
   };
 
   const signUp: AuthState["signUp"] = async (email, password, displayName) => {
     const redirectUrl = `${window.location.origin}/dashboard`;
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password,
       options: { emailRedirectTo: redirectUrl, data: { display_name: displayName } },
     });
-    return { error: error?.message ?? null };
+    if (error) return { error: error.message };
+    if (data.user) {
+      const p = await fetchProfile(data.user);
+      setProfile(p);
+    }
+    return { error: null };
   };
 
   const signOut: AuthState["signOut"] = async () => {
     await supabase.auth.signOut();
+    setProfile(null);
   };
 
   const forgotPassword: AuthState["forgotPassword"] = async (email) => {
@@ -91,13 +162,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refresh = useCallback(async () => {
-    if (user) await loadProfileAndRoles(user.id);
-  }, [user, loadProfileAndRoles]);
+    if (user) {
+      const p = await fetchProfile(user);
+      setProfile(p);
+    }
+  }, [user, fetchProfile]);
+
+  const isAdmin = profile?.role === "admin";
 
   const value: AuthState = {
-    user, session, profile, roles,
-    isAdmin: roles.includes("admin"),
-    isLoading,
+    user, session, profile, isAdmin, isLoading,
     signIn, signUp, signOut, forgotPassword, updatePassword, refresh,
   };
 
