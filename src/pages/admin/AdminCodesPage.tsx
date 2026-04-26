@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { EnrollmentCode, Chapter } from "@/types/nexus";
 
+const sb = supabase as any;
+
 export default function AdminCodesPage() {
   const [codes, setCodes] = useState<EnrollmentCode[]>([]);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -13,11 +15,11 @@ export default function AdminCodesPage() {
   const load = async () => {
     setLoading(true);
     const [c, ch] = await Promise.all([
-      supabase.from("enrollment_codes").select("*").order("generated_at", { ascending: false }),
-      supabase.from("chapters").select("*").order("name"),
+      sb.from("enrollment_codes").select("*").order("created_at", { ascending: false }),
+      sb.from("chapters").select("*").order("name"),
     ]);
-    setCodes((c.data ?? []) as EnrollmentCode[]);
-    setChapters((ch.data ?? []) as Chapter[]);
+    setCodes((c.data ?? []) as unknown as EnrollmentCode[]);
+    setChapters((ch.data ?? []) as unknown as Chapter[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
@@ -29,16 +31,15 @@ export default function AdminCodesPage() {
     const idx = parseInt(prompt(`Pick chapter:\n${list}`, "1") || "0", 10);
     const chapter = required[idx - 1]; if (!chapter) return;
     const max = parseInt(prompt("Max uses?", "1") || "1", 10);
-    const label = prompt("Label (optional)") || null;
     const code = `NEX-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const { error } = await supabase.from("enrollment_codes").insert({ code, chapter_id: chapter.id, max_uses: max, label });
+    const { error } = await sb.from("enrollment_codes").insert({ code, chapter_id: chapter.id, max_uses: max, is_active: true });
     if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
     else { toast({ title: "Code generated", description: code }); load(); }
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this code?")) return;
-    await supabase.from("enrollment_codes").delete().eq("id", id);
+    await sb.from("enrollment_codes").delete().eq("id", id);
     load();
   };
   const copy = (code: string) => { navigator.clipboard.writeText(code); toast({ title: "Copied" }); };
@@ -63,7 +64,7 @@ export default function AdminCodesPage() {
                 <th className="text-left p-4">Code</th>
                 <th className="text-left p-4">Chapter</th>
                 <th className="text-left p-4">Uses</th>
-                <th className="text-left p-4">Label</th>
+                <th className="text-left p-4">Status</th>
                 <th className="text-right p-4">Actions</th>
               </tr>
             </thead>
@@ -74,8 +75,8 @@ export default function AdminCodesPage() {
                   <tr key={c.id} className="border-t border-white/5 hover:bg-white/5">
                     <td className="p-4 font-mono text-primary">{c.code}</td>
                     <td className="p-4">{ch?.name ?? "—"}</td>
-                    <td className="p-4">{c.uses_count} / {c.max_uses}</td>
-                    <td className="p-4 text-foreground-dim">{c.label ?? "—"}</td>
+                    <td className="p-4">{c.used_count} / {c.max_uses}</td>
+                    <td className="p-4 text-foreground-dim">{c.is_active ? "Active" : "Disabled"}</td>
                     <td className="p-4 text-right space-x-2 whitespace-nowrap">
                       <button onClick={() => copy(c.code)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs"><Copy className="w-3 h-3" /> Copy</button>
                       <button onClick={() => remove(c.id)} className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white/5 hover:bg-destructive/20 text-xs text-destructive"><Trash2 className="w-3 h-3" /> Delete</button>

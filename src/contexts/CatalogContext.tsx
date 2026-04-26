@@ -15,6 +15,7 @@ interface Ctx {
 }
 
 const CatalogCtx = createContext<Ctx | undefined>(undefined);
+const sb = supabase as any;
 
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -25,18 +26,18 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     setIsLoading(true); setError(null);
     try {
       const [s, c, ch, v] = await Promise.all([
-        supabase.from("subjects").select("*").eq("is_active", true).order("display_order"),
-        supabase.from("cycles").select("*").eq("is_active", true).order("display_order"),
-        supabase.from("chapters").select("*").eq("is_active", true).order("display_order"),
-        supabase.from("videos").select("*").eq("is_active", true).order("display_order"),
+        sb.from("subjects").select("*").eq("is_active", true).order("order_index"),
+        sb.from("cycles").select("*").eq("is_active", true).order("order_index"),
+        sb.from("chapters").select("*").eq("is_active", true).order("order_index"),
+        sb.from("videos").select("*").eq("is_active", true).order("order_index"),
       ]);
       if (s.error || c.error || ch.error || v.error) {
         throw s.error || c.error || ch.error || v.error;
       }
-      const subjects = (s.data ?? []) as Subject[];
-      const cycles = (c.data ?? []) as Cycle[];
-      const chapters = (ch.data ?? []) as Chapter[];
-      const videos = (v.data ?? []) as Video[];
+      const subjects = (s.data ?? []) as unknown as Subject[];
+      const cycles = (c.data ?? []) as unknown as Cycle[];
+      const chapters = (ch.data ?? []) as unknown as Chapter[];
+      const videos = (v.data ?? []) as unknown as Video[];
 
       const built: CatalogSubject[] = subjects.map((subj) => ({
         ...subj,
