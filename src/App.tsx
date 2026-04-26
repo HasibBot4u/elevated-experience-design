@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AuthProvider } from "@/contexts/AuthContext";
 import { CatalogProvider } from "@/contexts/CatalogContext";
+import { SystemSettingsProvider } from "@/contexts/SystemSettingsContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { PublicShell } from "@/components/public/PublicShell";
 import { StudentLayout } from "@/components/layout/StudentLayout";
@@ -51,67 +52,69 @@ import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <CatalogProvider>
-            <Routes>
-              {/* Public */}
-              <Route element={<PublicShell />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/refund-policy" element={<RefundPolicyPage />} />
-                <Route path="/success-stories" element={<SuccessStoriesPage />} />
-              </Route>
+  <SystemSettingsProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <CatalogProvider>
+              <Routes>
+                {/* Public */}
+                <Route element={<PublicShell />}>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/refund-policy" element={<RefundPolicyPage />} />
+                  <Route path="/success-stories" element={<SuccessStoriesPage />} />
+                </Route>
 
-              {/* Auth */}
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/reset-password" element={<ResetPasswordPage />} />
-              <Route path="/maintenance" element={<MaintenancePage />} />
+                {/* Auth */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
+                <Route path="/maintenance" element={<MaintenancePage />} />
 
-              {/* Student app */}
-              <Route element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/courses" element={<CoursesPage />} />
-                <Route path="/subject/:subjectSlug" element={<SubjectPage />} />
-                <Route path="/cycle/:cycleId" element={<ChaptersPage />} />
-                <Route path="/chapter/:chapterId" element={<VideoListPage />} />
-                <Route path="/watch/:videoId" element={<PlayerPage />} />
-                <Route path="/search" element={<SearchPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/live" element={<LivePage />} />
-                <Route path="/progress" element={<ProgressPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/notes" element={<NotesPage />} />
-              </Route>
+                {/* Student app */}
+                <Route element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/courses" element={<CoursesPage />} />
+                  <Route path="/subject/:subjectSlug" element={<SubjectPage />} />
+                  <Route path="/cycle/:cycleId" element={<ChaptersPage />} />
+                  <Route path="/chapter/:chapterId" element={<VideoListPage />} />
+                  <Route path="/watch/:videoId" element={<PlayerPage />} />
+                  <Route path="/search" element={<SearchPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/live" element={<LivePage />} />
+                  <Route path="/progress" element={<ProgressPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/notes" element={<NotesPage />} />
+                </Route>
 
-              {/* Admin */}
-              <Route element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
-                <Route path="/admin" element={<AdminDashboardPage />} />
-                <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/content" element={<AdminContentPage />} />
-                <Route path="/admin/codes" element={<AdminCodesPage />} />
-                <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
-                <Route path="/admin/live" element={<AdminLivePage />} />
-                <Route path="/admin/settings" element={<AdminSettingsPage />} />
-              </Route>
+                {/* Admin */}
+                <Route element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
+                  <Route path="/admin" element={<AdminDashboardPage />} />
+                  <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/content" element={<AdminContentPage />} />
+                  <Route path="/admin/codes" element={<AdminCodesPage />} />
+                  <Route path="/admin/announcements" element={<AdminAnnouncementsPage />} />
+                  <Route path="/admin/live" element={<AdminLivePage />} />
+                  <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                </Route>
 
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </CatalogProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </CatalogProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </SystemSettingsProvider>
 );
 
 export default App;

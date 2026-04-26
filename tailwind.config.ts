@@ -26,6 +26,11 @@ export default {
           elevated: "hsl(var(--background-elevated))",
           overlay: "hsl(var(--background-overlay))",
         },
+        surface: {
+          DEFAULT: "hsl(var(--background-elevated))",
+          dark: "hsl(var(--background))",
+          light: "hsl(var(--background-overlay))",
+        },
         foreground: {
           DEFAULT: "hsl(var(--foreground))",
           dim: "hsl(var(--foreground-dim))",

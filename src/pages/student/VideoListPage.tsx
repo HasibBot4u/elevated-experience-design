@@ -1,21 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useParams, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Lock, PlayCircle, Clock, KeyRound, Loader2 } from "lucide-react";
 import { useCatalog } from "@/contexts/CatalogContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { useChapterAccess } from "@/hooks/useChapterAccess";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function VideoListPage() {
   const { chapterId } = useParams();
   const { catalog, isLoading } = useCatalog();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,32 +23,27 @@ export default function VideoListPage() {
     if (ch.id === chapterId) { chapter = ch; cycle = cy; subject = s; }
   })));
 
-  useEffect(() => {
-    if (!chapter || !user) return;
-    if (!chapter.requires_enrollment) { setHasAccess(true); return; }
-    supabase.from("chapter_access").select("id").eq("user_id", user.id).eq("chapter_id", chapter.id).maybeSingle()
-      .then(({ data }) => setHasAccess(!!data));
-  }, [chapter, user]);
+  const { hasAccess, redeemCode } = useChapterAccess(chapter?.id, !!chapter?.requires_enrollment);
+
+  const formatCode = (raw: string) => {
+    const stripped = raw.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 24);
+    return stripped.match(/.{1,4}/g)?.join("-") ?? stripped;
+  };
 
   const redeem = async () => {
     if (!code.trim()) return;
     setBusy(true);
-    const { data, error } = await supabase.rpc("redeem_enrollment_code", {
-      _code: code.trim(),
-      _device_fingerprint: navigator.userAgent.slice(0, 200),
-    });
+    const res = await redeemCode(code);
     setBusy(false);
-    if (error) { toast({ title: "Error", description: error.message, variant: "destructive" }); return; }
-    const r = data as any;
-    if (!r.ok) {
-      const msg = r.error === "invalid_code" ? "Invalid code" : r.error === "code_exhausted" ? "Code already used" : "Failed";
-      toast({ title: msg, variant: "destructive" });
+    if (!res.success) {
+      toast({ title: "ত্রুটি", description: res.error, variant: "destructive" });
       return;
     }
-    toast({ title: "Chapter unlocked" });
+    toast({ title: "অধ্যায় আনলক হয়েছে" });
     setShowCodeModal(false);
-    setHasAccess(true);
+    setCode("");
   };
+
 
   if (isLoading) return <div className="container py-20 text-center text-foreground-muted">Loading…</div>;
   if (!chapter) return <Navigate to="/courses" replace />;
@@ -72,15 +65,22 @@ export default function VideoListPage() {
       </div>
 
       <div className="container py-10 space-y-4">
-        {chapter.requires_enrollment && hasAccess === false ? (
+        {chapter.requires_enrollment && hasAccess === null ? (
+          <div className="space-y-2 max-w-md mx-auto">
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <Skeleton className="h-10 w-2/3 mx-auto rounded-full" />
+          </div>
+        ) : chapter.requires_enrollment && hasAccess === false ? (
           <div className="rounded-2xl p-10 bg-gradient-card border border-warning/30 text-center max-w-md mx-auto">
             <div className="w-14 h-14 rounded-full bg-warning/10 border border-warning/30 flex items-center justify-center mx-auto mb-5">
               <Lock className="w-6 h-6 text-warning" />
             </div>
-            <h3 className="font-display text-xl font-bold mb-2">Premium chapter</h3>
-            <p className="text-foreground-dim mb-6 text-sm">Enter your enrollment code to unlock this chapter on this device.</p>
-            <Button onClick={() => setShowCodeModal(true)} className="rounded-full bg-primary hover:bg-primary-glow shadow-glow">
-              <KeyRound className="w-4 h-4 mr-2" /> Enter code
+            <h3 className="font-display text-xl font-bold mb-2 font-bangla">প্রিমিয়াম অধ্যায়</h3>
+            <p className="text-foreground-dim mb-6 text-sm font-bangla">
+              এই অধ্যায়টি আনলক করতে আপনার এনরোলমেন্ট কোড লিখুন।
+            </p>
+            <Button onClick={() => setShowCodeModal(true)} className="rounded-full bg-primary hover:bg-primary-glow shadow-glow font-bangla">
+              <KeyRound className="w-4 h-4 mr-2" /> কোড দিয়ে আনলক করুন
             </Button>
           </div>
         ) : chapter.videos.length === 0 ? (
@@ -115,11 +115,16 @@ export default function VideoListPage() {
 
       <Dialog open={showCodeModal} onOpenChange={setShowCodeModal}>
         <DialogContent className="glass-strong border-border">
-          <DialogHeader><DialogTitle>Enter enrollment code</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-bangla">এনরোলমেন্ট কোড লিখুন</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <Input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="XXXX-XXXX" className="h-12 font-mono tracking-widest text-center text-lg" />
-            <Button onClick={redeem} disabled={busy} className="w-full h-11 rounded-full bg-primary hover:bg-primary-glow font-semibold shadow-glow">
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Unlock chapter"}
+            <Input
+              value={code}
+              onChange={e => setCode(formatCode(e.target.value))}
+              placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"
+              className="h-12 font-mono tracking-widest text-center text-lg"
+            />
+            <Button onClick={redeem} disabled={busy} className="w-full h-11 rounded-full bg-primary hover:bg-primary-glow font-semibold shadow-glow font-bangla">
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "কোড দিয়ে আনলক করুন"}
             </Button>
           </div>
         </DialogContent>
