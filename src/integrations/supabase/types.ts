@@ -52,6 +52,7 @@ export type Database = {
           expires_at: string | null
           id: string
           is_active: boolean
+          is_pinned: boolean
           show_on_dashboard: boolean
           title: string
           title_bn: string | null
@@ -64,6 +65,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           show_on_dashboard?: boolean
           title: string
           title_bn?: string | null
@@ -76,6 +78,7 @@ export type Database = {
           expires_at?: string | null
           id?: string
           is_active?: boolean
+          is_pinned?: boolean
           show_on_dashboard?: boolean
           title?: string
           title_bn?: string | null
@@ -244,6 +247,8 @@ export type Database = {
         Row: {
           chapter_id: string
           code: string
+          created_by: string | null
+          expires_at: string | null
           generated_at: string
           generated_by: string | null
           id: string
@@ -256,6 +261,8 @@ export type Database = {
         Insert: {
           chapter_id: string
           code: string
+          created_by?: string | null
+          expires_at?: string | null
           generated_at?: string
           generated_by?: string | null
           id?: string
@@ -268,6 +275,8 @@ export type Database = {
         Update: {
           chapter_id?: string
           code?: string
+          created_by?: string | null
+          expires_at?: string | null
           generated_at?: string
           generated_by?: string | null
           id?: string
@@ -671,6 +680,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_stats: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
