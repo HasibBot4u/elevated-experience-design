@@ -193,6 +193,35 @@ export type Database = {
           },
         ]
       }
+      cycle_completions: {
+        Row: {
+          completed_at: string | null
+          cycle_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          cycle_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          cycle_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycle_completions_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cycles: {
         Row: {
           created_at: string
@@ -440,6 +469,196 @@ export type Database = {
         }
         Relationships: []
       }
+      qa_answers: {
+        Row: {
+          body: string
+          created_at: string | null
+          id: string
+          is_accepted: boolean | null
+          question_id: string
+          user_id: string
+          votes: number | null
+        }
+        Insert: {
+          body: string
+          created_at?: string | null
+          id?: string
+          is_accepted?: boolean | null
+          question_id: string
+          user_id: string
+          votes?: number | null
+        }
+        Update: {
+          body?: string
+          created_at?: string | null
+          id?: string
+          is_accepted?: boolean | null
+          question_id?: string
+          user_id?: string
+          votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "qa_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      qa_questions: {
+        Row: {
+          body: string
+          chapter_id: string | null
+          created_at: string | null
+          id: string
+          is_answered: boolean | null
+          title: string
+          user_id: string
+          votes: number | null
+        }
+        Insert: {
+          body: string
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          title: string
+          user_id: string
+          votes?: number | null
+        }
+        Update: {
+          body?: string
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_answered?: boolean | null
+          title?: string
+          user_id?: string
+          votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qa_questions_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_attempts: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          id: string
+          quiz_id: string
+          score: number
+          started_at: string | null
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          id?: string
+          quiz_id: string
+          score?: number
+          started_at?: string | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          id?: string
+          quiz_id?: string
+          score?: number
+          started_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_attempts_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quiz_questions: {
+        Row: {
+          correct_idx: number
+          explanation: string | null
+          id: string
+          options: Json
+          order_index: number | null
+          question: string
+          quiz_id: string
+        }
+        Insert: {
+          correct_idx: number
+          explanation?: string | null
+          id?: string
+          options: Json
+          order_index?: number | null
+          question: string
+          quiz_id: string
+        }
+        Update: {
+          correct_idx?: number
+          explanation?: string | null
+          id?: string
+          options?: Json
+          order_index?: number | null
+          question?: string
+          quiz_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quiz_questions_quiz_id_fkey"
+            columns: ["quiz_id"]
+            isOneToOne: false
+            referencedRelation: "quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quizzes: {
+        Row: {
+          chapter_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          time_limit_seconds: number | null
+          title: string
+        }
+        Insert: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          time_limit_seconds?: number | null
+          title: string
+        }
+        Update: {
+          chapter_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          time_limit_seconds?: number | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quizzes_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           color: string | null
@@ -529,6 +748,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_bookmarks: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string | null
+          timestamp_seconds: number
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          timestamp_seconds?: number
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          timestamp_seconds?: number
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_bookmarks_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       video_notes: {
         Row: {
