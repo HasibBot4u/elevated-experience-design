@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, BookOpen, KeyRound, Megaphone, Radio, Settings, ArrowLeft, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, BookOpen, KeyRound, Megaphone, Radio, Settings, ArrowLeft, LogOut, ScrollText, ServerCog, Ticket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { NexusLogo } from "@/components/brand/NexusLogo";
 
@@ -7,9 +7,12 @@ const items = [
   { to: "/admin", end: true, icon: LayoutDashboard, label: "Overview" },
   { to: "/admin/users", icon: Users, label: "Users" },
   { to: "/admin/content", icon: BookOpen, label: "Content" },
-  { to: "/admin/codes", icon: KeyRound, label: "Enrollment codes" },
+  { to: "/admin/enrollment", icon: Ticket, label: "এনরোলমেন্ট কোড" },
+  { to: "/admin/codes", icon: KeyRound, label: "Codes (legacy)" },
   { to: "/admin/announcements", icon: Megaphone, label: "Announcements" },
   { to: "/admin/live", icon: Radio, label: "Live classes" },
+  { to: "/admin/logs", icon: ScrollText, label: "লগ" },
+  { to: "/admin/system", icon: ServerCog, label: "সিস্টেম সেটিংস" },
   { to: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 

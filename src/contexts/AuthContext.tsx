@@ -7,7 +7,6 @@ interface Profile {
   email: string;
   display_name?: string | null;
   role: 'user' | 'admin';
-  is_enrolled?: boolean;
   is_blocked?: boolean;
   avatar_url?: string | null;
   phone?: string | null;
@@ -37,47 +36,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = useCallback(async (u: User): Promise<Profile | null> => {
-    const { data, error } = await supabase
-      .from("profiles" as any)
-      .select("*")
-      .eq("id", u.id)
-      .single();
+    const sb = supabase as any;
+    const { data } = await sb.from("profiles").select("*").eq("id", u.id).maybeSingle();
+    const base: Profile = data
+      ? { ...(data as any), role: 'user' }
+      : {
+          id: u.id,
+          email: u.email ?? "",
+          display_name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Student",
+          role: 'user',
+          is_blocked: false,
+        };
 
-    if (error || !data) {
-      // Auto-create a profile if one does not exist yet.
-      const newProfile = {
-        id: u.id,
-        email: u.email ?? "",
-        display_name: u.user_metadata?.display_name || u.email?.split("@")[0] || "Student",
-        role: "user" as const,
-        is_enrolled: false,
-        is_blocked: false,
-      };
-      const { data: created } = await supabase
-        .from("profiles" as any)
-        .insert(newProfile)
-        .select("*")
-        .single();
-      return (created as unknown as Profile) ?? (newProfile as Profile);
-    }
-    return data as unknown as Profile;
-  }, []);
+    // Role lives in user_roles table (NOT on profiles).
+    const { data: roleRow } = await sb
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", u.id)
+      .eq("role", "admin")
+      .maybeSingle();
+    if (roleRow) base.role = 'admin';
 
-  const enforceBlocked = useCallback(async (p: Profile | null) => {
-    if (p?.is_blocked) {
-      await supabase.auth.signOut();
-      setProfile(null);
-      throw new Error("Your account has been blocked. Contact support.");
-    }
+    return base;
   }, []);
 
   useEffect(() => {
-    // Set listener FIRST, then check existing session.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        // Defer Supabase calls to avoid deadlock.
         setTimeout(async () => {
           const p = await fetchProfile(s.user);
           setProfile(p);
@@ -111,21 +98,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn: AuthState["signIn"] = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return { error: error.message };
-
     if (data.user) {
       const p = await fetchProfile(data.user);
       setProfile(p);
-      try {
-        await enforceBlocked(p);
-      } catch (e: any) {
-        return { error: e.message };
+      if (p?.is_blocked) {
+        await supabase.auth.signOut();
+        setProfile(null);
+        return { error: "Your account has been blocked. Contact support." };
       }
-      // Activity log (fire and forget)
-      supabase.from("activity_logs" as any).insert({
+      (supabase as any).from("activity_logs").insert({
         user_id: data.user.id,
         action: "login",
-        metadata: { email: data.user.email },
-      } as any).then(() => {}, () => {});
+        details: { email: data.user.email },
+      }).then(() => {}, () => {});
     }
     return { error: null };
   };

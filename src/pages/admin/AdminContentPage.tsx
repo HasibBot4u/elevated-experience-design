@@ -2,15 +2,31 @@ import { useEffect, useState } from "react";
 import { Loader2, Plus, Trash2, ChevronRight, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import type { Subject, Cycle, Chapter, Video } from "@/types/nexus";
+
+interface SubjectRow { id: string; name: string; name_bn: string | null; slug: string; icon: string | null; color: string | null; display_order: number; is_active: boolean; }
+interface CycleRow { id: string; subject_id: string; name: string; name_bn: string | null; display_order: number; is_active: boolean; }
+interface ChapterRow { id: string; cycle_id: string; name: string; name_bn: string | null; description: string | null; requires_enrollment: boolean; display_order: number; is_active: boolean; }
+interface VideoRow {
+  id: string; chapter_id: string; title: string; title_bn: string | null;
+  source_type: string; telegram_channel_id: string | null; telegram_message_id: number | null;
+  youtube_video_id: string | null; drive_file_id: string | null;
+  duration: string | null; thumbnail_url: string | null; size_mb: number | null;
+  display_order: number; is_active: boolean;
+}
 
 const sb = supabase as any;
+const DEFAULT_BACKEND = "https://nexusedu-backend-0bjq.onrender.com";
+
+const warmupBackend = () => {
+  const url = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BACKEND).replace(/\/+$/, "");
+  fetch(url + "/api/warmup", { method: "POST" }).catch(() => {});
+};
 
 export default function AdminContentPage() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [cycles, setCycles] = useState<Cycle[]>([]);
-  const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [videos, setVideos] = useState<Video[]>([]);
+  const [subjects, setSubjects] = useState<SubjectRow[]>([]);
+  const [cycles, setCycles] = useState<CycleRow[]>([]);
+  const [chapters, setChapters] = useState<ChapterRow[]>([]);
+  const [videos, setVideos] = useState<VideoRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeSubject, setActiveSubject] = useState<string | null>(null);
   const [activeCycle, setActiveCycle] = useState<string | null>(null);
@@ -20,69 +36,92 @@ export default function AdminContentPage() {
   const load = async () => {
     setLoading(true);
     const [s, c, ch, v] = await Promise.all([
-      sb.from("subjects").select("*").order("order_index"),
-      sb.from("cycles").select("*").order("order_index"),
-      sb.from("chapters").select("*").order("order_index"),
-      sb.from("videos").select("*").order("order_index"),
+      sb.from("subjects").select("*").order("display_order"),
+      sb.from("cycles").select("*").order("display_order"),
+      sb.from("chapters").select("*").order("display_order"),
+      sb.from("videos").select("*").order("display_order"),
     ]);
-    setSubjects((s.data ?? []) as unknown as Subject[]);
-    setCycles((c.data ?? []) as unknown as Cycle[]);
-    setChapters((ch.data ?? []) as unknown as Chapter[]);
-    setVideos((v.data ?? []) as unknown as Video[]);
+    setSubjects((s.data ?? []) as SubjectRow[]);
+    setCycles((c.data ?? []) as CycleRow[]);
+    setChapters((ch.data ?? []) as ChapterRow[]);
+    setVideos((v.data ?? []) as VideoRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
 
+  const ok = (msg: string) => { toast({ title: msg }); load(); };
+  const fail = (e: any) => toast({ title: "Failed", description: e?.message ?? String(e), variant: "destructive" });
+
   const addSubject = async () => {
     const name = prompt("Subject name?"); if (!name) return;
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const { error } = await sb.from("subjects").insert({ name, slug, order_index: subjects.length, is_active: true });
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Subject added" }); load(); }
+    const name_bn = prompt("Bengali name? (optional)") ?? null;
+    const slug = name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+    const icon = prompt("Icon (emoji)?", "📚") ?? "📚";
+    const color = prompt("Hex color?", "#FF2E55") ?? "#FF2E55";
+    const { error } = await sb.from("subjects").insert({ name, name_bn, slug, icon, color, display_order: subjects.length, is_active: true });
+    if (error) return fail(error); ok("Subject added");
   };
   const addCycle = async () => {
     if (!activeSubject) return;
     const name = prompt("Cycle name?"); if (!name) return;
+    const name_bn = prompt("Bengali name?") ?? null;
     const list = cycles.filter(c => c.subject_id === activeSubject);
-    const { error } = await sb.from("cycles").insert({ name, subject_id: activeSubject, order_index: list.length, is_active: true });
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Cycle added" }); load(); }
+    const { error } = await sb.from("cycles").insert({ name, name_bn, subject_id: activeSubject, display_order: list.length, is_active: true });
+    if (error) return fail(error); ok("Cycle added");
   };
   const addChapter = async () => {
     if (!activeCycle) return;
     const name = prompt("Chapter name?"); if (!name) return;
+    const name_bn = prompt("Bengali name?") ?? null;
+    const description = prompt("Description?") ?? null;
     const requires = confirm("Require enrollment code for this chapter?");
     const list = chapters.filter(c => c.cycle_id === activeCycle);
-    const { error } = await sb.from("chapters").insert({ name, cycle_id: activeCycle, requires_enrollment: requires, order_index: list.length, is_active: true });
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Chapter added" }); load(); }
+    const { error } = await sb.from("chapters").insert({ name, name_bn, description, cycle_id: activeCycle, requires_enrollment: requires, display_order: list.length, is_active: true });
+    if (error) return fail(error);
+    warmupBackend(); ok("Chapter added");
   };
   const addVideo = async () => {
     if (!activeChapter) return;
     const title = prompt("Video title?"); if (!title) return;
-    const source_type = (prompt("Source: youtube / drive / telegram", "youtube") || "youtube").trim();
-    const url = prompt("Source URL or ID?") || "";
+    const title_bn = prompt("Bengali title?") ?? null;
+    const source_type = (prompt("Source: telegram / youtube / drive", "telegram") || "telegram").trim();
     const list = videos.filter(v => v.chapter_id === activeChapter);
-    const payload: any = { title, chapter_id: activeChapter, source_type, order_index: list.length, is_active: true };
-    if (source_type === "youtube") payload.youtube_id = url.match(/[a-zA-Z0-9_-]{11}/)?.[0] ?? url;
-    if (source_type === "drive") payload.drive_file_id = url;
-    if (source_type === "telegram") payload.telegram_message_id = url;
+    const payload: any = { title, title_bn, chapter_id: activeChapter, source_type, display_order: list.length, is_active: true };
+
+    if (source_type === "telegram") {
+      payload.telegram_channel_id = prompt("Telegram channel ID?") || null;
+      const msg = prompt("Telegram message ID? (number)") || "";
+      payload.telegram_message_id = msg ? parseInt(msg) : null;
+    } else if (source_type === "youtube") {
+      const url = prompt("YouTube video URL or ID?") || "";
+      payload.youtube_video_id = url.match(/[a-zA-Z0-9_-]{11}/)?.[0] ?? url;
+    } else if (source_type === "drive") {
+      payload.drive_file_id = prompt("Google Drive file ID?") || null;
+    }
+    payload.duration = prompt("Duration (HH:MM:SS or MM:SS)?", "00:00") || "00:00";
+    const size = prompt("Size MB? (optional)") || "";
+    if (size) payload.size_mb = parseInt(size);
+    payload.thumbnail_url = prompt("Thumbnail URL?") || null;
+
     const { error } = await sb.from("videos").insert(payload);
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Video added" }); load(); }
+    if (error) return fail(error);
+    warmupBackend(); ok("Video added");
   };
+
   const removeRow = async (table: "subjects" | "cycles" | "chapters" | "videos", id: string) => {
-    if (!confirm("Delete this item permanently?")) return;
+    if (!confirm("Delete permanently?")) return;
     const { error } = await sb.from(table).delete().eq("id", id);
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Deleted" }); load(); }
+    if (error) return fail(error);
+    if (table === "videos" || table === "chapters") warmupBackend();
+    ok("Deleted");
   };
   const renameRow = async (table: "subjects" | "cycles" | "chapters" | "videos", id: string, current: string) => {
     const name = prompt("New name?", current); if (!name || name === current) return;
     const payload: any = table === "videos" ? { title: name } : { name };
     const { error } = await sb.from(table).update(payload).eq("id", id);
-    if (error) toast({ title: "Failed", description: error.message, variant: "destructive" });
-    else { toast({ title: "Renamed" }); load(); }
+    if (error) return fail(error);
+    if (table === "videos" || table === "chapters") warmupBackend();
+    ok("Renamed");
   };
 
   if (loading) return <div className="flex justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
@@ -118,7 +157,7 @@ export default function AdminContentPage() {
               onClick={() => { setActiveSubject(s.id); setActiveCycle(null); setActiveChapter(null); }}
               onRename={() => renameRow("subjects", s.id, s.name)}
               onDelete={() => removeRow("subjects", s.id)}
-              label={s.name} hasChildren />
+              label={`${s.icon ?? "📚"} ${s.name}`} hasChildren />
           ))}
         </Col>
         <Col title="Cycles" onAdd={activeSubject ? addCycle : undefined}>
